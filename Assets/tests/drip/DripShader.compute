@@ -1,0 +1,167 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Random
+#pragma kernel Blurr
+#pragma kernel UpdateAgents
+
+struct Agent {
+    float2 position;
+    float directionAngle;
+};
+
+
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+RWStructuredBuffer<Agent> Agents;
+float time;
+float sizeX;
+float sizeY;
+//between 0 and 1
+float feremonIntensity;
+float blurrMultiplier;
+float randomMult;
+float speed;
+float rand(in float2 uv)
+{
+    return (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453)) * 2 - 1;
+}
+/*
+int indexFromId(uint3 id)
+{
+    return id.x + _CubesPerAxis * (id.y + _CubesPerAxis * id.z);
+}
+*/
+[numthreads(8,8,1)]
+void Random (uint3 id : SV_DispatchThreadID)
+{        
+    float random = rand(float2(id.x * time, id.y * time));
+    Result[id.xy] = float4(random, random, random, 1);
+}
+
+float4 averageOfNeighbour(float2 uv)
+{
+    float4 sum = 0;
+	for (int i = -1; i <= 1; i++)
+	{
+		for (int j = -1; j <= 1; j++)
+		{
+			sum += Result[uv + float2(i, j)];
+		}
+	}
+	return sum / 9;
+}
+
+[numthreads(8,8,1)]
+void Blurr (uint3 id : SV_DispatchThreadID)
+{   
+    Result[id.xy] = averageOfNeighbour(id.xy) * blurrMultiplier;//Result[id.xy] * blurrMultiplier; //
+}
+
+float4 getColorAtPosition(float2 position)
+{
+    if(position.x < 0 || position.x > sizeX || position.y < 0 || position.y > sizeY)
+	{
+        return 0;
+    }
+    return Result[position];
+}
+
+float4 getColorAtLine(float2 position, float directionAngle, float distance)
+{
+	float2 direction = float2(cos(directionAngle), sin(directionAngle));
+	float2 currentPosition = position;
+	float4 color = 0;
+    float iterations = 3;
+    float step = distance / iterations;
+	for(int i = 0; i < iterations; i++)
+	{
+        currentPosition += direction * step;
+        float4 colorAtPos = getColorAtPosition(currentPosition);
+		color += colorAtPos;
+        //  Result[currentPosition] = float4(0, 12, 0, 0);
+	}
+	return color / iterations;
+}
+
+float2 positionFromAngle(float2 start, float distance, float angle)
+{
+	return start + float2(cos(angle), sin(angle)) * distance;
+}
+
+float angleAdditionForFeremonTrails(float2 position, float angle)
+{
+    float checkdistance = 8;
+    float startDist = 8;
+    //22.5 degrees
+    float angleOffset = 3.14159f / 4 /2;
+        
+    float angles[5] = {0, - angleOffset, + angleOffset, angleOffset *2, angleOffset*-2};
+    float4 colorArr[5];
+    
+    float angleToAdd = 0;
+    float currValue = 0;
+    for(int i = 0; i < 5; i++)
+	{
+        float currAngle = angle + angles[i];
+		colorArr[i] = getColorAtLine(positionFromAngle(position, startDist,currAngle), currAngle, checkdistance);
+	    
+        if(colorArr[i].x > angleToAdd)
+        {
+			angleToAdd = angles[i];
+			currValue = colorArr[i].x;
+		}
+    }
+    
+    float angleAddition = angleToAdd * feremonIntensity;
+    
+	return angleAddition;
+}
+
+[numthreads(1024,1,1)]
+void UpdateAgents (uint3 id : SV_DispatchThreadID)
+{   
+    Agent agent = Agents[id.x];
+    float angle = agent.directionAngle;
+    
+    //future position
+    float2 directionVec = float2(cos(angle), sin(angle));
+    float2 newPos = agent.position + (directionVec*speed);
+    
+    //collision detection
+    if (newPos.x < 0 || newPos.x > sizeX)
+	{
+        angle += 3.14159/2;
+	}
+    if (newPos.y < 0 || newPos.y > sizeY)
+    {
+        angle += 3.14159/2;
+	}
+
+    //follow trails
+    angle += angleAdditionForFeremonTrails(newPos, angle);
+    
+    //random variation in movement
+    float randomValue = rand(agent.position * time); 
+    randomValue *= 2;
+    randomValue -= 1;
+    randomValue *= randomMult;
+    angle += randomValue;
+    
+    //resetting the angle to avoid overflow
+    angle = angle % (2 * 3.14159);
+    
+    //calculating the vector from the angle
+    directionVec = float2(cos(angle), sin(angle));
+    //updating the position by the new direction and the speed
+    agent.position += (directionVec*speed);
+    //updating the angle
+    agent.directionAngle = angle;
+    //set the agent
+	Agents[id.x] = agent;
+    //set the pixel
+
+    
+    Result[agent.position] = float4(1, 0, 0, 1);
+    //Result[positionFromAngle(agent.position, 10, angle)] = float4(0, 0, 1, 1);
+}
