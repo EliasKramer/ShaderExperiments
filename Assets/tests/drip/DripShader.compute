@@ -6,6 +6,7 @@
 struct Agent {
     float2 position;
     float directionAngle;
+    float4 color;
 };
 
 
@@ -21,10 +22,18 @@ float sizeY;
 float feremonIntensity;
 float blurrMultiplier;
 float randomMult;
+float randomRadRange;
 float speed;
+float radiusOfAgent;
+int iterations;
+
 float rand(in float2 uv)
 {
-    return (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453)) * 2 - 1;
+    return clamp(frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453), 0.0, 1.0);
+}
+float randBetween(in float2 uv, in float min, in float max)
+{
+	return rand(uv) * (max - min) + min;
 }
 /*
 int indexFromId(uint3 id)
@@ -70,18 +79,20 @@ float4 getColorAtPosition(float2 position)
 float4 getColorAtLine(float2 position, float directionAngle, float distance)
 {
 	float2 direction = float2(cos(directionAngle), sin(directionAngle));
+    float2 checkPos = position + direction * distance;
+    
 	float2 currentPosition = position;
 	float4 color = 0;
-    float iterations = 3;
+    float iterations = 2;
     float step = distance / iterations;
 	for(int i = 0; i < iterations; i++)
 	{
         currentPosition += direction * step;
         float4 colorAtPos = getColorAtPosition(currentPosition);
 		color += colorAtPos;
-        //  Result[currentPosition] = float4(0, 12, 0, 0);
+        //Result[currentPosition] = float4(0, 1, 0, 0);
 	}
-	return color / iterations;
+	return color;
 }
 
 float2 positionFromAngle(float2 start, float distance, float angle)
@@ -89,7 +100,12 @@ float2 positionFromAngle(float2 start, float distance, float angle)
 	return start + float2(cos(angle), sin(angle)) * distance;
 }
 
-float angleAdditionForFeremonTrails(float2 position, float angle)
+float differenceBetweenColors(float4 color1, float4 color2)
+{
+	return abs(color1.r - color2.r) + abs(color1.g - color2.g) + abs(color1.b - color2.b);
+}
+
+float angleAdditionForFeremonTrails(float2 position, float angle, float4 givenColor)
 {
     float checkdistance = 8;
     float startDist = 8;
@@ -100,16 +116,18 @@ float angleAdditionForFeremonTrails(float2 position, float angle)
     float4 colorArr[5];
     
     float angleToAdd = 0;
-    float currValue = 0;
+    float currValue = 10000000;
     for(int i = 0; i < 5; i++)
 	{
         float currAngle = angle + angles[i];
 		colorArr[i] = getColorAtLine(positionFromAngle(position, startDist,currAngle), currAngle, checkdistance);
 	    
-        if(colorArr[i].x > angleToAdd)
+        float colorDiff = differenceBetweenColors(colorArr[i], givenColor);
+
+        if(colorDiff < currValue)
         {
 			angleToAdd = angles[i];
-			currValue = colorArr[i].x;
+			currValue = colorDiff;
 		}
     }
     
@@ -121,6 +139,8 @@ float angleAdditionForFeremonTrails(float2 position, float angle)
 [numthreads(1024,1,1)]
 void UpdateAgents (uint3 id : SV_DispatchThreadID)
 {   
+    for(int i = 0; i < iterations; i++)
+    {
     Agent agent = Agents[id.x];
     float angle = agent.directionAngle;
     
@@ -129,27 +149,36 @@ void UpdateAgents (uint3 id : SV_DispatchThreadID)
     float2 newPos = agent.position + (directionVec*speed);
     
     //collision detection
+
+    
     if (newPos.x < 0 || newPos.x > sizeX)
 	{
-        angle += 3.14159/2;
+        angle += 3.14159;
 	}
     if (newPos.y < 0 || newPos.y > sizeY)
     {
-        angle += 3.14159/2;
+        angle += 3.14159;
 	}
 
     //follow trails
-    angle += angleAdditionForFeremonTrails(newPos, angle);
-    
-    //random variation in movement
-    float randomValue = rand(agent.position * time); 
-    randomValue *= 2;
-    randomValue -= 1;
-    randomValue *= randomMult;
-    angle += randomValue;
+    float randomValue = randBetween(agent.position * time, -randomRadRange, randomRadRange); 
+
+    if(randBetween(agent.position * time, 0, randomMult) < 1)
+    {
+        //random variation in movement
+        angle += randomValue;
+    }
+    else{
+        angle += randomValue * .1f;
+        angle += angleAdditionForFeremonTrails(newPos, angle, agent.color);
+    }
     
     //resetting the angle to avoid overflow
-    angle = angle % (2 * 3.14159);
+    //angle = angle % (2 * 3.14159);
+    /*while(angle < 0 )
+    {
+        angle += 2 * 3.14159;
+    }*/
     
     //calculating the vector from the angle
     directionVec = float2(cos(angle), sin(angle));
@@ -161,7 +190,12 @@ void UpdateAgents (uint3 id : SV_DispatchThreadID)
 	Agents[id.x] = agent;
     //set the pixel
 
-    
-    Result[agent.position] = float4(1, 0, 0, 1);
-    //Result[positionFromAngle(agent.position, 10, angle)] = float4(0, 0, 1, 1);
+    float2 center = float2(sizeX/2, sizeY/2);
+    float distanceToCenter = length(agent.position - center);
+    float centerDistPercent = distanceToCenter / (sizeX/2);
+
+    float4 averageColorOfNeighbour = averageOfNeighbour(agent.position);
+    //Result[agent.position] = agent.color;
+    Result[agent.position] = agent.color;
+    }
 }
