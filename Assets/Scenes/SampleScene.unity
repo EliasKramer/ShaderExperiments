@@ -315,10 +315,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TextureShader: {fileID: 7200000, guid: 565a6149f86cd594e8acf9514acb6083, type: 3}
-  feremonIntensity: 0.5
+  feremonIntensity: 0.72
   blurrMultiplier: 0.9
   randomMult: 5
-  randomAngleRangle: 1
-  speed: 1
+  randomAngleRangle: 8.41
+  speed: 6.57
   iterations: 1
-  radiusOfAgent: 1

@@ -139,9 +139,9 @@ float angleAdditionForFeremonTrails(float2 position, float angle, float4 givenCo
 [numthreads(1024,1,1)]
 void UpdateAgents (uint3 id : SV_DispatchThreadID)
 {   
+    Agent agent = Agents[id.x];
     for(int i = 0; i < iterations; i++)
     {
-    Agent agent = Agents[id.x];
     float angle = agent.directionAngle;
     
     //future position
@@ -150,7 +150,28 @@ void UpdateAgents (uint3 id : SV_DispatchThreadID)
     
     //collision detection
 
+    if(newPos.x < 0)
+	{
+		newPos.x = sizeX;
+        angle = 3.14159;
+	}
+    if(newPos.x > sizeX)
+    {
+        newPos.x = 0;
+        angle = 0;
+	}
+    if(newPos.y < 0)
+	{
+		newPos.y = sizeY;
+        angle = 3.14159/4*3;
+    }
+    if(newPos.y > sizeY)
+    {
+		newPos.y = 0;
+        angle = 3.14159/4;
+    }
     
+    /*
     if (newPos.x < 0 || newPos.x > sizeX)
 	{
         angle += 3.14159;
@@ -158,20 +179,24 @@ void UpdateAgents (uint3 id : SV_DispatchThreadID)
     if (newPos.y < 0 || newPos.y > sizeY)
     {
         angle += 3.14159;
-	}
+	}*/
 
     //follow trails
     float randomValue = randBetween(agent.position * time, -randomRadRange, randomRadRange); 
+    angle += randomValue * randomMult;
 
+    angle += angleAdditionForFeremonTrails(newPos, angle, agent.color);
+
+    /*
     if(randBetween(agent.position * time, 0, randomMult) < 1)
     {
         //random variation in movement
         angle += randomValue;
     }
     else{
-        angle += randomValue * .1f;
+        angle += randomValue * 1;
         angle += angleAdditionForFeremonTrails(newPos, angle, agent.color);
-    }
+    }*/
     
     //resetting the angle to avoid overflow
     //angle = angle % (2 * 3.14159);
@@ -195,7 +220,7 @@ void UpdateAgents (uint3 id : SV_DispatchThreadID)
     float centerDistPercent = distanceToCenter / (sizeX/2);
 
     float4 averageColorOfNeighbour = averageOfNeighbour(agent.position);
-    //Result[agent.position] = agent.color;
     Result[agent.position] = agent.color;
+    
     }
 }

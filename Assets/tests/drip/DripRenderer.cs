@@ -30,7 +30,7 @@ public class DripRenderer : MonoBehaviour
         public Color color; //4 float size
     }
     private const int threads = 1024;
-    private int numberOfAgents = threads * 1024;
+    private int numberOfAgents = threads * 256;
     private Agent[] _agents;
     private ComputeBuffer _agentBuffer;
     private Color[] _colorsForAgents;
@@ -57,7 +57,7 @@ public class DripRenderer : MonoBehaviour
         _agents = new Agent[numberOfAgents];
         for (int i = 0; i < _agents.Length; i++)
         {
-            _agents[i].position = new Vector2(Screen.width / 2, Screen.height / 2);//   new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));
+            _agents[i].position = new Vector2(Screen.width / 2, Screen.height / 2);//   new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));// 
             _agents[i].directionAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2);
             _agents[i].color = getRandomColor();
         }
@@ -68,17 +68,18 @@ public class DripRenderer : MonoBehaviour
     {
         List<Color> colorList = new List<Color>
         {
-            Color.red,
-            Color.blue,
-            Color.green
-            //Color.blue
+            new Color(.3f, 1f, .3f, 1f),
+            new Color(.4f, 1f, .4f, 1f),
+            new Color(.5f, 1f, .5f, 1f),
+            new Color(.6f, 1f, .6f, 1f),
+            new Color(.6f, 1f, .6f, 1f)
         };
 
         _colorsForAgents = colorList.ToArray();
     }
     private Color getRandomColor()
     {
-        return _colorsForAgents[UnityEngine.Random.Range(0, _colorsForAgents.Length)];
+        return _colorsForAgents.Length == 0 ? _colorsForAgents[0] : _colorsForAgents[UnityEngine.Random.Range(0, _colorsForAgents.Length)];
     }
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
