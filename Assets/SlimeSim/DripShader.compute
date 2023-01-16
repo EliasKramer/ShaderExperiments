@@ -109,7 +109,7 @@ float angleAdditionForFeremonTrails(float2 position, float angle, float4 givenCo
 {
     float checkdistance = 8;
     float startDist = 8;
-    //22.5 degrees
+    //11.25 degrees
     float angleOffset = 3.14159f / 4 /2;
         
     float angles[5] = {0, - angleOffset, + angleOffset, angleOffset *2, angleOffset*-2};

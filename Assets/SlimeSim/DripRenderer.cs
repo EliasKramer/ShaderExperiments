@@ -30,7 +30,7 @@ public class DripRenderer : MonoBehaviour
         public Color color; //4 float size
     }
     private const int threads = 1024;
-    private int numberOfAgents = threads * 256;
+    private int numberOfAgents = threads * 128;
     private Agent[] _agents;
     private ComputeBuffer _agentBuffer;
     private Color[] _colorsForAgents;
@@ -68,11 +68,13 @@ public class DripRenderer : MonoBehaviour
     {
         List<Color> colorList = new List<Color>
         {
-            new Color(.3f, 1f, .3f, 1f),
+            Color.white,
+            Color.blue,
+            /*new Color(.3f, 1f, .3f, 1f),
             new Color(.4f, 1f, .4f, 1f),
             new Color(.5f, 1f, .5f, 1f),
             new Color(.6f, 1f, .6f, 1f),
-            new Color(.6f, 1f, .6f, 1f)
+            new Color(.6f, 1f, .6f, 1f)*/
         };
 
         _colorsForAgents = colorList.ToArray();
