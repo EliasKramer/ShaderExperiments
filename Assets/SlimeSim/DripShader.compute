@@ -64,7 +64,10 @@ float4 averageOfNeighbour(float2 uv)
 [numthreads(8,8,1)]
 void Blurr (uint3 id : SV_DispatchThreadID)
 {   
-    Result[id.xy] = averageOfNeighbour(id.xy) * blurrMultiplier;//Result[id.xy] * blurrMultiplier; //
+    for(int i = 0; i < iterations; i++)
+    {
+        Result[id.xy] = averageOfNeighbour(id.xy) * blurrMultiplier;//Result[id.xy] * blurrMultiplier; //
+    }
 }
 
 float4 getColorAtPosition(float2 position)
@@ -136,91 +139,70 @@ float angleAdditionForFeremonTrails(float2 position, float angle, float4 givenCo
 	return angleAddition;
 }
 
+Agent calculateNewPosition(Agent agent)
+{
+    float2 direction = float2(cos(agent.directionAngle), sin(agent.directionAngle));
+    float2 newPos = agent.position + (direction * speed);
+
+    bool hasToRecalculate = false;
+    
+    if (newPos.x < 0)
+    {
+        agent.directionAngle = 0;
+        hasToRecalculate = true;
+    }
+    if (newPos.x > sizeX)
+    {
+        agent.directionAngle = 3.14159;
+        hasToRecalculate = true;
+    }
+    if (newPos.y < 0)
+    {
+        agent.directionAngle = 3.14159 / 2;
+        hasToRecalculate = true;
+    }
+    if (newPos.y > sizeY)
+    {
+        agent.directionAngle = 3.14159 / 2 * 3;
+        hasToRecalculate = true;
+    }
+
+    if (hasToRecalculate)
+    {
+        direction = float2(cos(agent.directionAngle), sin(agent.directionAngle));
+        newPos = agent.position + (direction * speed);
+    }
+    
+    agent.position = newPos;
+    return agent;
+}
+
 [numthreads(1024,1,1)]
 void UpdateAgents (uint3 id : SV_DispatchThreadID)
 {   
     Agent agent = Agents[id.x];
     for(int i = 0; i < iterations; i++)
     {
-    float angle = agent.directionAngle;
-    
-    //future position
-    float2 directionVec = float2(cos(angle), sin(angle));
-    float2 newPos = agent.position + (directionVec*speed);
-    
-    //collision detection
+        float angle = agent.directionAngle;
 
-    if(newPos.x < 0)
-	{
-		newPos.x = sizeX;
-        angle = 3.14159;
-	}
-    if(newPos.x > sizeX)
-    {
-        newPos.x = 0;
-        angle = 0;
-	}
-    if(newPos.y < 0)
-	{
-		newPos.y = sizeY;
-        angle = 3.14159/4*3;
-    }
-    if(newPos.y > sizeY)
-    {
-		newPos.y = 0;
-        angle = 3.14159/4;
-    }
-    
-    /*
-    if (newPos.x < 0 || newPos.x > sizeX)
-	{
-        angle += 3.14159;
-	}
-    if (newPos.y < 0 || newPos.y > sizeY)
-    {
-        angle += 3.14159;
-	}*/
+        //follow trails
+        float randomValue = randBetween(agent.position * time, -randomRadRange, randomRadRange); 
+        angle += randomValue * randomMult;
 
-    //follow trails
-    float randomValue = randBetween(agent.position * time, -randomRadRange, randomRadRange); 
-    angle += randomValue * randomMult;
-
-    angle += angleAdditionForFeremonTrails(newPos, angle, agent.color);
-
-    /*
-    if(randBetween(agent.position * time, 0, randomMult) < 1)
-    {
-        //random variation in movement
-        angle += randomValue;
-    }
-    else{
-        angle += randomValue * 1;
-        angle += angleAdditionForFeremonTrails(newPos, angle, agent.color);
-    }*/
-    
-    //resetting the angle to avoid overflow
-    //angle = angle % (2 * 3.14159);
-    /*while(angle < 0 )
-    {
-        angle += 2 * 3.14159;
-    }*/
-    
-    //calculating the vector from the angle
-    directionVec = float2(cos(angle), sin(angle));
-    //updating the position by the new direction and the speed
-    agent.position += (directionVec*speed);
-    //updating the angle
-    agent.directionAngle = angle;
-    //set the agent
-	Agents[id.x] = agent;
-    //set the pixel
-
-    float2 center = float2(sizeX/2, sizeY/2);
-    float distanceToCenter = length(agent.position - center);
-    float centerDistPercent = distanceToCenter / (sizeX/2);
-
-    float4 averageColorOfNeighbour = averageOfNeighbour(agent.position);
-    Result[agent.position] = agent.color;
+        angle += angleAdditionForFeremonTrails(agent.position, angle, agent.color);
+        
+        //calculating the vector from the angle
+        float2 directionVec = float2(cos(angle), sin(angle));
+        //updating the position by the new direction and the speed
+        agent.position += (directionVec*speed);
+        //updating the angle
+        agent.directionAngle = angle;
+        //set the agent
+        Agents[id.x] = calculateNewPosition(agent);
+        
+        //set the pixel
+        float4 averageColorOfNeighbour = averageOfNeighbour(agent.position);
+        Result[agent.position] = agent.color;
     
     }
 }

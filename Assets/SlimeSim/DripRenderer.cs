@@ -1,3 +1,4 @@
+using Assets.SlimeSim;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,7 +10,6 @@ public class DripRenderer : MonoBehaviour
     public ComputeShader TextureShader;
     private RenderTexture _rTexture;
 
-    private bool firstTime = true;
     //between 0 and 1
     [SerializeField]
     public float feremonIntensity = 0.4f;
@@ -33,7 +33,7 @@ public class DripRenderer : MonoBehaviour
     private int numberOfAgents = threads * 128;
     private Agent[] _agents;
     private ComputeBuffer _agentBuffer;
-    private Color[] _colorsForAgents;
+    private ColorRange[] _colorsForAgents;
     public void Awake()
     {
         _rTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
@@ -58,6 +58,7 @@ public class DripRenderer : MonoBehaviour
         for (int i = 0; i < _agents.Length; i++)
         {
             _agents[i].position = new Vector2(Screen.width / 2, Screen.height / 2);//   new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));// 
+            //_agents[i].position = new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));// 
             _agents[i].directionAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2);
             _agents[i].color = getRandomColor();
         }
@@ -66,22 +67,25 @@ public class DripRenderer : MonoBehaviour
     }
     private void initColorsForAgents()
     {
-        List<Color> colorList = new List<Color>
+        List<ColorRange> colorList = new List<ColorRange>
         {
-            Color.white,
-            Color.blue,
-            /*new Color(.3f, 1f, .3f, 1f),
-            new Color(.4f, 1f, .4f, 1f),
-            new Color(.5f, 1f, .5f, 1f),
-            new Color(.6f, 1f, .6f, 1f),
-            new Color(.6f, 1f, .6f, 1f)*/
+            new ColorRange(
+                new Color(1.0f, 0.0f, 0.0f, 0.0f),
+                new Color(1.0f, 5.0f, 0.0f, 0.0f)
+                ),
+            new ColorRange(
+                new Color(0.0f, 1.0f, 0.0f, 0.0f),
+                new Color(0.0f, 1.0f, 5.0f, 0.0f)
+                ),
         };
 
         _colorsForAgents = colorList.ToArray();
     }
     private Color getRandomColor()
     {
-        return _colorsForAgents.Length == 0 ? _colorsForAgents[0] : _colorsForAgents[UnityEngine.Random.Range(0, _colorsForAgents.Length)];
+        return _colorsForAgents.Length == 0 ? 
+            _colorsForAgents[0].getRandomColor() :
+            _colorsForAgents[UnityEngine.Random.Range(0, _colorsForAgents.Length)].getRandomColor();
     }
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
