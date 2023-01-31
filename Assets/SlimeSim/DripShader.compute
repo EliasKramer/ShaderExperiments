@@ -21,7 +21,6 @@ float sizeY;
 //between 0 and 1
 float feremonIntensity;
 float blurrMultiplier;
-float randomMult;
 float randomRadRange;
 float speed;
 float radiusOfAgent;
@@ -187,7 +186,7 @@ void UpdateAgents (uint3 id : SV_DispatchThreadID)
 
         //follow trails
         float randomValue = randBetween(agent.position * time, -randomRadRange, randomRadRange); 
-        angle += randomValue * randomMult;
+        angle += randomValue;
 
         angle += angleAdditionForFeremonTrails(agent.position, angle, agent.color);
         

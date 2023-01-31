@@ -16,13 +16,13 @@ public class DripRenderer : MonoBehaviour
     [SerializeField]
     public float blurrMultiplier = .95f;
     [SerializeField]
-    public float randomMult = 1;
-    [SerializeField]
     public float randomAngleRangle = 12f;
     [SerializeField]
     public float speed = 2f;
     [SerializeField]
     public int iterations = 1;
+    [SerializeField]
+    public bool spawncenter = true;
     private struct Agent
     {
         public Vector2 position; //2 float size
@@ -57,8 +57,9 @@ public class DripRenderer : MonoBehaviour
         _agents = new Agent[numberOfAgents];
         for (int i = 0; i < _agents.Length; i++)
         {
-            _agents[i].position = new Vector2(Screen.width / 2, Screen.height / 2);//   new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));// 
-            //_agents[i].position = new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));// 
+            _agents[i].position = spawncenter ? 
+                new Vector2(Screen.width / 2, Screen.height / 2) :
+                new Vector2(UnityEngine.Random.Range(0, Screen.width), UnityEngine.Random.Range(0, Screen.height));
             _agents[i].directionAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2);
             _agents[i].color = getRandomColor();
         }
@@ -71,12 +72,8 @@ public class DripRenderer : MonoBehaviour
         {
             new ColorRange(
                 new Color(1.0f, 0.0f, 0.0f, 0.0f),
-                new Color(1.0f, 5.0f, 0.0f, 0.0f)
-                ),
-            new ColorRange(
-                new Color(0.0f, 1.0f, 0.0f, 0.0f),
-                new Color(0.0f, 1.0f, 5.0f, 0.0f)
-                ),
+                new Color(0.0f, 1.0f, 0.0f, 0.0f)
+                )
         };
 
         _colorsForAgents = colorList.ToArray();
@@ -117,7 +114,6 @@ public class DripRenderer : MonoBehaviour
         TextureShader.SetFloat("time", Time.deltaTime);
         TextureShader.SetFloat("feremonIntensity", feremonIntensity);
         TextureShader.SetFloat("blurrMultiplier", blurrMultiplier);
-        TextureShader.SetFloat("randomMult", randomMult);
         TextureShader.SetFloat("speed", speed);
         TextureShader.SetInt("iterations", iterations);
         TextureShader.SetFloat("randomRadRange", randomAngleRangle * Mathf.Deg2Rad);
